@@ -2,6 +2,75 @@ package Class::Events;
 
 use warnings;
 use strict;
+use Carp::Clan qw( Class::Events );
+
+
+our $VERSION = '0.01';
+
+##########################
+# The subscribers database
+
+our %subscribers;
+
+
+##############
+# The main API
+
+sub subscribe {
+  my ($class, $args) = @_;
+  
+  my ($topic, $cb) = _req_param($args, qw( topic cb ));
+  croak("[FATAL] 'topic' parameter is undefined, ") unless defined $topic;
+  croak("[FATAL] 'cb' parameter must be a coderef, ") unless ref($cb) eq 'CODE';
+
+  my $subs = $subscribers{$topic} ||= [];
+  push @$subs, $cb;
+  
+  return;
+}
+
+
+sub notify {
+  my $class = shift;
+  my $topic = shift;
+
+  croak("[FATAL] missing required first parameter (topic), ")
+    unless defined($topic);
+  
+  return unless exists $subscribers{$topic};
+  
+  foreach my $cb (@{$subscribers{$topic}}) {
+    # First parameter will be a context object eventually
+    # reserve the slot for now
+    $cb->(undef, @_);
+  }
+  
+  return;
+}
+
+
+#######
+# Utils
+
+sub _req_param {
+  my $args = shift;
+  my @rets;
+  
+  foreach my $arg (@_) {
+    croak("[FATAL] missing required parameter '$arg', ")
+      unless exists $args->{$arg};
+    push @rets, $args->{$arg};
+  }
+  
+  return @rets;
+}
+
+
+1; # End of Class::Events
+
+
+
+__END__
 
 =head1 NAME
 
@@ -10,11 +79,6 @@ Class::Events - The great new Class::Events!
 =head1 VERSION
 
 Version 0.01
-
-=cut
-
-our $VERSION = '0.01';
-
 
 =head1 SYNOPSIS
 
@@ -36,21 +100,11 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =head2 function1
 
-=cut
-
-sub function1 {
-}
-
 =head2 function2
-
-=cut
-
-sub function2 {
-}
 
 =head1 AUTHOR
 
-Pedro Melo, C<< <melo at cpan.org> >>
+Pedro Melo, C<< <melo at simplicidade.org> >>
 
 =head1 BUGS
 
@@ -102,6 +156,3 @@ This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
 
-=cut
-
-1; # End of Class::Events
